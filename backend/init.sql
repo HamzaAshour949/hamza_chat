@@ -2,6 +2,9 @@ CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
+    email_verified TINYINT(1) NOT NULL DEFAULT 0,
+    verification_code VARCHAR(10) NULL,
+    verification_expires_at DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -22,7 +25,8 @@ CREATE TABLE IF NOT EXISTS messages (
     INDEX idx_conversation (from_user, to_user, created_at)
 );
 
--- Seed test accounts (password: password123)
-INSERT INTO users (email, password) VALUES
-    ('test1@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'),
-    ('test2@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
+-- Seed test accounts (password: password123) — already verified so they can
+-- log in without going through the Brevo email-confirmation flow.
+INSERT INTO users (email, password, email_verified) VALUES
+    ('test1@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 1),
+    ('test2@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 1);

@@ -56,7 +56,19 @@ function AuthNavigator() {
       <AuthStack.Screen name="Login">
         {({ navigation }) => (
           <LoginScreen
-            onLogin={login}
+            onLogin={async (email, password) => {
+              try {
+                // If the account isn't verified yet, the backend returns
+                // { pendingVerification: true } and auto-resends a code;
+                // route the user straight into the verify screen.
+                const needsVerification = await login(email, password);
+                if (needsVerification) {
+                  navigation.navigate('VerifyEmail');
+                }
+              } catch {
+                // error is surfaced through the `error` prop
+              }
+            }}
             onSwitchToRegister={() => navigation.navigate('Register')}
             loading={loading}
             error={error}

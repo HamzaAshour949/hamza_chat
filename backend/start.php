@@ -102,6 +102,92 @@ function getMimeTypeForExtension(string $ext): string {
 }
 
 // ---------------------------------------------------------------------------
+// Email verification helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a cryptographically-random 6-digit numeric verification code.
+ */
+function generateVerificationCode(): string {
+    return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+}
+
+/**
+ * Send a transactional email via the Brevo (ex-Sendinblue) HTTP API.
+ * Returns true on success, false otherwise. Errors are logged but not thrown
+ * so a mail-delivery glitch never leaks into the caller's HTTP response as a
+ * 500. When BREVO_API_KEY is unset we skip the network call and just log the
+ * code — useful for local development.
+ */
+function sendVerificationEmail(string $toEmail, string $code): bool {
+    $apiKey = getenv('BREVO_API_KEY') ?: '';
+    if ($apiKey === '') {
+        error_log("[brevo] BREVO_API_KEY not set; verification code for $toEmail is $code");
+        return true; // dev-mode: treat as success
+    }
+
+    $senderEmail = getenv('BREVO_SENDER_EMAIL') ?: 'no-reply@chatapp.local';
+    $senderName  = getenv('BREVO_SENDER_NAME')  ?: 'ChatApp';
+
+    $payload = [
+        'sender'      => ['name' => $senderName, 'email' => $senderEmail],
+        'to'          => [['email' => $toEmail]],
+        'subject'     => 'Your ChatApp verification code',
+        'htmlContent' =>
+            '<div style="font-family:Arial,sans-serif;color:#111">'
+            . '<h2>Confirm your email</h2>'
+            . '<p>Your ChatApp verification code is:</p>'
+            . '<p style="font-size:28px;font-weight:700;letter-spacing:6px;color:#00A884">'
+            . htmlspecialchars($code, ENT_QUOTES, 'UTF-8')
+            . '</p>'
+            . '<p>This code expires in 15 minutes. If you did not request this, you can ignore this email.</p>'
+            . '</div>',
+        'textContent' =>
+            "Your ChatApp verification code is: $code\n"
+            . "This code expires in 15 minutes.\n",
+    ];
+
+    $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 8,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_HTTPHEADER     => [
+            'accept: application/json',
+            'content-type: application/json',
+            'api-key: ' . $apiKey,
+        ],
+        CURLOPT_POSTFIELDS     => json_encode($payload),
+    ]);
+    $response = curl_exec($ch);
+    $status   = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err      = curl_error($ch);
+    curl_close($ch);
+
+    if ($status >= 200 && $status < 300) {
+        return true;
+    }
+
+    error_log("[brevo] send failed status=$status err=$err body=" . (string) $response);
+    return false;
+}
+
+/**
+ * Store (or replace) a verification code for a user and return the plain code
+ * so the caller can email it. Codes expire after 15 minutes.
+ */
+function issueVerificationCode(PDO $db, int $userId): string {
+    $code    = generateVerificationCode();
+    $expires = gmdate('Y-m-d H:i:s', time() + (15 * 60));
+    $stmt    = $db->prepare(
+        'UPDATE users SET verification_code = ?, verification_expires_at = ? WHERE id = ?'
+    );
+    $stmt->execute([$code, $expires, $userId]);
+    return $code;
+}
+
+// ---------------------------------------------------------------------------
 // HTTP route handler (for Workerman inner HTTP Worker)
 // ---------------------------------------------------------------------------
 function handleRequest(TcpConnection $connection, Request $request): void {
@@ -117,10 +203,13 @@ function handleRequest(TcpConnection $connection, Request $request): void {
     try {
         // =================================================================
         // POST /auth/register
+        // Creates an unverified user (or refreshes the code if they already
+        // started registration but never confirmed), emails a 6-digit code
+        // via Brevo, and responds with { pendingVerification: true, email }.
         // =================================================================
         if ($method === 'POST' && $path === '/auth/register') {
             $data     = json_decode($request->rawBody(), true);
-            $email    = trim($data['email'] ?? '');
+            $email    = strtolower(trim($data['email'] ?? ''));
             $password = $data['password'] ?? '';
 
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -133,22 +222,141 @@ function handleRequest(TcpConnection $connection, Request $request): void {
             }
 
             $db   = getDB();
-            $stmt = $db->prepare('SELECT id FROM users WHERE email = ?');
+            $stmt = $db->prepare('SELECT id, email_verified FROM users WHERE email = ?');
             $stmt->execute([$email]);
-            if ($stmt->fetch()) {
+            $existing = $stmt->fetch();
+
+            if ($existing && (int) $existing['email_verified'] === 1) {
                 $connection->send(jsonResponse(400, ['error' => 'Email already registered']));
                 return;
             }
 
             $hash = password_hash($password, PASSWORD_BCRYPT);
-            $stmt = $db->prepare('INSERT INTO users (email, password) VALUES (?, ?)');
-            $stmt->execute([$email, $hash]);
-            $userId = (int) $db->lastInsertId();
+            if ($existing) {
+                // Send the verification email BEFORE overwriting the stored
+                // password — otherwise a Brevo outage could leave a pending
+                // user with a new password but no way to confirm it.
+                $userId  = (int) $existing['id'];
+                $code    = generateVerificationCode();
+                if (!sendVerificationEmail($email, $code)) {
+                    $connection->send(jsonResponse(502, [
+                        'error' => 'Failed to send verification email. Please try again shortly.',
+                    ]));
+                    return;
+                }
+                $expires = gmdate('Y-m-d H:i:s', time() + (15 * 60));
+                $stmt = $db->prepare(
+                    'UPDATE users SET password = ?, verification_code = ?, verification_expires_at = ? WHERE id = ?'
+                );
+                $stmt->execute([$hash, $code, $expires, $userId]);
+            } else {
+                $stmt = $db->prepare(
+                    'INSERT INTO users (email, password, email_verified) VALUES (?, ?, 0)'
+                );
+                $stmt->execute([$email, $hash]);
+                $userId = (int) $db->lastInsertId();
+
+                $code = issueVerificationCode($db, $userId);
+                if (!sendVerificationEmail($email, $code)) {
+                    $connection->send(jsonResponse(502, [
+                        'error' => 'Failed to send verification email. Please try again shortly.',
+                    ]));
+                    return;
+                }
+            }
 
             $connection->send(jsonResponse(201, [
-                'token' => createJWT($userId),
-                'user'  => ['id' => $userId, 'email' => $email],
+                'pendingVerification' => true,
+                'email'               => $email,
             ]));
+            return;
+        }
+
+        // =================================================================
+        // POST /auth/verify-email
+        // Body: { email, code }. On success marks the user as verified and
+        // returns { token, user } to log them in.
+        // =================================================================
+        if ($method === 'POST' && $path === '/auth/verify-email') {
+            $data  = json_decode($request->rawBody(), true);
+            $email = strtolower(trim($data['email'] ?? ''));
+            $code  = trim((string) ($data['code'] ?? ''));
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{6}$/', $code)) {
+                $connection->send(jsonResponse(400, ['error' => 'Invalid email or code']));
+                return;
+            }
+
+            $db   = getDB();
+            $stmt = $db->prepare(
+                'SELECT id, email, email_verified, verification_code, verification_expires_at
+                 FROM users WHERE email = ?'
+            );
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
+
+            if (!$user) {
+                $connection->send(jsonResponse(400, ['error' => 'Invalid email or code']));
+                return;
+            }
+            if ((int) $user['email_verified'] === 1) {
+                $connection->send(jsonResponse(400, ['error' => 'Email is already verified']));
+                return;
+            }
+            if (!$user['verification_code'] || !$user['verification_expires_at']) {
+                $connection->send(jsonResponse(400, ['error' => 'No verification code on file. Please request a new one.']));
+                return;
+            }
+            // verification_expires_at is written with gmdate() (no tz suffix),
+            // so append " UTC" before parsing to avoid the server's
+            // local-timezone interpretation.
+            if (strtotime($user['verification_expires_at'] . ' UTC') < time()) {
+                $connection->send(jsonResponse(400, ['error' => 'Verification code has expired. Please request a new one.']));
+                return;
+            }
+            if (!hash_equals((string) $user['verification_code'], $code)) {
+                $connection->send(jsonResponse(400, ['error' => 'Incorrect verification code']));
+                return;
+            }
+
+            $stmt = $db->prepare(
+                'UPDATE users SET email_verified = 1, verification_code = NULL, verification_expires_at = NULL WHERE id = ?'
+            );
+            $stmt->execute([$user['id']]);
+
+            $connection->send(jsonResponse(200, [
+                'token' => createJWT((int) $user['id']),
+                'user'  => ['id' => (int) $user['id'], 'email' => $user['email']],
+            ]));
+            return;
+        }
+
+        // =================================================================
+        // POST /auth/resend-verification
+        // Body: { email }. Regenerates the code and re-sends the email.
+        // Always returns { ok: true } so we don't leak whether an address
+        // exists in our database.
+        // =================================================================
+        if ($method === 'POST' && $path === '/auth/resend-verification') {
+            $data  = json_decode($request->rawBody(), true);
+            $email = strtolower(trim($data['email'] ?? ''));
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $connection->send(jsonResponse(400, ['error' => 'Invalid email format']));
+                return;
+            }
+
+            $db   = getDB();
+            $stmt = $db->prepare('SELECT id, email_verified FROM users WHERE email = ?');
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
+
+            if ($user && (int) $user['email_verified'] === 0) {
+                $code = issueVerificationCode($db, (int) $user['id']);
+                sendVerificationEmail($email, $code);
+            }
+
+            $connection->send(jsonResponse(200, ['ok' => true]));
             return;
         }
 
@@ -157,7 +365,7 @@ function handleRequest(TcpConnection $connection, Request $request): void {
         // =================================================================
         if ($method === 'POST' && $path === '/auth/login') {
             $data     = json_decode($request->rawBody(), true);
-            $email    = trim($data['email'] ?? '');
+            $email    = strtolower(trim($data['email'] ?? ''));
             $password = $data['password'] ?? '';
 
             if ($email === '' || $password === '') {
@@ -166,12 +374,25 @@ function handleRequest(TcpConnection $connection, Request $request): void {
             }
 
             $db   = getDB();
-            $stmt = $db->prepare('SELECT id, email, password FROM users WHERE email = ?');
+            $stmt = $db->prepare('SELECT id, email, password, email_verified FROM users WHERE email = ?');
             $stmt->execute([$email]);
             $user = $stmt->fetch();
 
             if (!$user || !password_verify($password, $user['password'])) {
                 $connection->send(jsonResponse(401, ['error' => 'Invalid email or password']));
+                return;
+            }
+
+            if ((int) $user['email_verified'] === 0) {
+                // Auto-resend a fresh code so the frontend can route straight
+                // into the verify screen without a separate user action.
+                $code = issueVerificationCode($db, (int) $user['id']);
+                sendVerificationEmail($email, $code);
+
+                $connection->send(jsonResponse(200, [
+                    'pendingVerification' => true,
+                    'email'               => $user['email'],
+                ]));
                 return;
             }
 
