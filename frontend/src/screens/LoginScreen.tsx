@@ -28,7 +28,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 interface LoginScreenProps {
-  onLogin: (email: string, password: string) => void;
+  onLogin: (email: string, password: string) => void | Promise<void>;
   onSwitchToRegister: () => void;
   loading: boolean;
   error: string | null;

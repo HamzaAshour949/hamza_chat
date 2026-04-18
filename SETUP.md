@@ -20,7 +20,24 @@ This is a fully functional ultra-low-bandwidth WhatsApp-style messaging app buil
 
 ## Quick Start
 
-### Step 1: Start the Backend (Docker)
+### Step 1: Configure environment variables
+
+Copy `.env.example` to `.env` in the repo root and fill in your secrets:
+
+```bash
+cp .env.example .env
+```
+
+At minimum, set a strong `JWT_SECRET` and your Brevo credentials for the
+email-verification flow:
+
+| Var | Purpose |
+|-----|---------|
+| `BREVO_API_KEY` | Brevo transactional-email API key (see https://app.brevo.com/settings/keys/api). If left empty, the server logs the 6-digit code to stdout instead of emailing it — handy for development. |
+| `BREVO_SENDER_EMAIL` | The "From" address for verification emails. Must be a Brevo-verified sender. |
+| `BREVO_SENDER_NAME` | Display name on the verification emails (default: `ChatApp`). |
+
+### Step 2: Start the Backend (Docker)
 
 ```bash
 cd /Users/hamzaashour/Documents/mywork/chatapp
@@ -50,7 +67,7 @@ curl -X POST http://localhost:3000/auth/login \
 # Should respond with a JWT token
 ```
 
-### Step 2: Start the Frontend (Expo)
+### Step 3: Start the Frontend (Expo)
 
 In a **new terminal**:
 
@@ -71,7 +88,7 @@ npx expo start
 - Download **Expo Go** from App Store (iOS) or Play Store (Android)
 - Scan the QR code from the terminal
 
-### Step 3: Log In
+### Step 4: Log In
 
 Use one of the pre-seeded test accounts:
 

@@ -3,6 +3,7 @@ backend/vendor/
 
 # Environment variables
 .env
+!.env.example
 
 # Uploads (keep directory via .gitkeep)
 backend/uploads/*

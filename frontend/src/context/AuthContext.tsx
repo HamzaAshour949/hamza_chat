@@ -13,7 +13,7 @@ interface AuthContextType {
   error: string | null;
   /** Email awaiting confirmation after register; null if no pending verification. */
   pendingVerificationEmail: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
   /** Returns true if email verification is required before login completes. */
   register: (email: string, password: string) => Promise<boolean>;
   /** Confirm the code emailed to the user. On success, the user is logged in. */
@@ -61,13 +61,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     setLoading(true);
     try {
-      const data = await api<{ token: string; user: User }>('/auth/login', {
+      // Backend may respond with { pendingVerification: true, email } for
+      // accounts whose email hasn't been confirmed yet (a fresh code is
+      // re-sent automatically). In that case we return true so the
+      // navigator can push the VerifyEmail screen.
+      const data = await api<{
+        token?: string;
+        user?: User;
+        pendingVerification?: boolean;
+        email?: string;
+      }>('/auth/login', {
         method: 'POST',
         body: { email, password },
         auth: false,
       });
-      await setToken(data.token);
-      setUser(data.user);
+      if (data.token && data.user) {
+        await setToken(data.token);
+        setUser(data.user);
+        setPendingVerificationEmail(null);
+        return false;
+      }
+      setPendingVerificationEmail(data.email ?? email);
+      return true;
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Login failed';
       setError(message);
