@@ -1,0 +1,17 @@
+# Dependencies
+backend/vendor/
+
+# Environment variables
+.env
+
+# Uploads (keep directory via .gitkeep)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Docker volumes
+mysql_data/
+
+# OS files
+.DS_Store
+
+node_modules
