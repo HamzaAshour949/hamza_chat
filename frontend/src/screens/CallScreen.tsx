@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { RTCView, MediaStream } from 'react-native-webrtc';
+import { RTCView, MediaStream } from '../services/webrtc';
 
 type CallState = 'outgoing' | 'incoming' | 'connected';
 type CallType = 'voice' | 'video';

@@ -7,13 +7,15 @@ import React, {
   useRef,
 } from 'react';
 import { getSocket } from '../services/socket';
-import { createPeerConnection, getLocalStream } from '../services/webrtc';
 import {
+  createPeerConnection,
+  getLocalStream,
   RTCSessionDescription,
   RTCIceCandidate,
   MediaStream,
   RTCPeerConnection,
-} from 'react-native-webrtc';
+  isWebRTCAvailable,
+} from '../services/webrtc';
 import CallScreen from '../screens/CallScreen';
 
 type CallState = 'idle' | 'outgoing' | 'incoming' | 'connected';

@@ -31,6 +31,7 @@ export default {
     plugins: [
       'expo-secure-store',
       'expo-audio',
+      'expo-font',
       [
         '@config-plugins/react-native-webrtc',
         {

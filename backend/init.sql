@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS messages (
 
 -- Seed test accounts (password: password123) — already verified so they can
 -- log in without going through the Brevo email-confirmation flow.
+-- Hash below is bcrypt of "password123" (regenerated — older hash in git was stale).
 INSERT INTO users (email, password, email_verified) VALUES
-    ('test1@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 1),
-    ('test2@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 1);
+    ('test1@test.com', '$2y$10$uyJawIaNFU.1CTfAdQckz.mmAGNNffHVV1LvhknwiiKGpuGNIgmhi', 1),
+    ('test2@test.com', '$2y$10$uyJawIaNFU.1CTfAdQckz.mmAGNNffHVV1LvhknwiiKGpuGNIgmhi', 1);

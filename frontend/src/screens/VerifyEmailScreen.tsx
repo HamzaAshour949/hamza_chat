@@ -2,7 +2,7 @@
  * VerifyEmailScreen
  *
  * Shown after a successful POST /auth/register when the backend (which sends
- * the email via BREVO) reports that email confirmation is required.
+ * the email via  ) reports that email confirmation is required.
  *
  * Layout (mirrors LoginScreen / RegisterScreen):
  *  - Centered logo area (mail icon + "Verify your email" title)

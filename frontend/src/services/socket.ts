@@ -1,6 +1,10 @@
-import { io, Socket } from 'socket.io-client';
+import io from 'socket.io-client';
 import { WS_URL } from './config';
 import { flushQueue, registerSocketGetter } from './offlineQueue';
+
+// socket.io-client v2 (to match phpsocket.io server, which speaks EIO=3).
+// The v2 package has no exported `Socket` type, so we infer it.
+type Socket = ReturnType<typeof io>;
 
 let socket: Socket | null = null;
 
@@ -17,12 +21,20 @@ export function connectSocket(token: string): Socket {
   });
 
   socket.on('connect', () => {
-    console.log('Socket connected');
+    console.log('[socket] connected');
     socket?.emit('authenticate', { token });
   });
 
+  socket.on('connect_error', (err: Error) => {
+    console.warn('[socket] connect_error:', err?.message ?? err);
+  });
+
+  socket.on('disconnect', (reason: string) => {
+    console.log('[socket] disconnected:', reason);
+  });
+
   socket.on('authenticated', (data: { userId: number }) => {
-    console.log('Socket authenticated:', data.userId);
+    console.log('[socket] authenticated:', data.userId);
     flushQueue();
   });
 

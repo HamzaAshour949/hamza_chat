@@ -29,6 +29,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Message {
   id: string;
@@ -221,6 +222,7 @@ export default function ChatScreen({
 }: ChatScreenProps) {
   const [text, setText] = useState('');
   const hasText = text.trim().length > 0;
+  const insets = useSafeAreaInsets();
 
   const handleSend = () => {
     const trimmed = text.trim();
@@ -268,7 +270,7 @@ export default function ChatScreen({
       )}
 
       {/* Input Bar */}
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, { paddingBottom: 8 + insets.bottom }]}>
         <Pressable
           onPress={onAttachPress}
           style={styles.inputAction}

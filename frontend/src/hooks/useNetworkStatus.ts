@@ -1,28 +1,63 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSocket } from '../services/socket';
 
+type Socket = NonNullable<ReturnType<typeof getSocket>>;
+
+/**
+ * Tracks whether the Socket.io connection is live.
+ *
+ * `connectSocket()` is invoked asynchronously from `AppNavigator`, so the
+ * socket may not exist on the first render. We poll briefly until the socket
+ * appears, then attach listeners for `connect` / `disconnect` / `authenticated`.
+ */
 export function useNetworkStatus() {
   const [connected, setConnected] = useState(false);
+  const attachedRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
+    let cancelled = false;
 
-    const handleConnect = () => setConnected(true);
-    const handleDisconnect = () => setConnected(false);
-    const handleAuthenticated = () => setConnected(true);
+    const handleConnect = () => !cancelled && setConnected(true);
+    const handleDisconnect = () => !cancelled && setConnected(false);
 
-    // Check initial state
-    setConnected(socket.connected);
+    const attach = (socket: Socket) => {
+      if (attachedRef.current === socket) return;
+      attachedRef.current = socket;
+      setConnected(socket.connected);
+      socket.on('connect', handleConnect);
+      socket.on('disconnect', handleDisconnect);
+      socket.on('authenticated', handleConnect);
+    };
 
-    socket.on('connect', handleConnect);
-    socket.on('disconnect', handleDisconnect);
-    socket.on('authenticated', handleAuthenticated);
+    const existing = getSocket();
+    if (existing) {
+      attach(existing);
+      return () => {
+        cancelled = true;
+        existing.off('connect', handleConnect);
+        existing.off('disconnect', handleDisconnect);
+        existing.off('authenticated', handleConnect);
+      };
+    }
+
+    const interval = setInterval(() => {
+      if (cancelled) return;
+      const s = getSocket();
+      if (s) {
+        clearInterval(interval);
+        attach(s);
+      }
+    }, 200);
 
     return () => {
-      socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      socket.off('authenticated', handleAuthenticated);
+      cancelled = true;
+      clearInterval(interval);
+      const s = attachedRef.current;
+      if (s) {
+        s.off('connect', handleConnect);
+        s.off('disconnect', handleDisconnect);
+        s.off('authenticated', handleConnect);
+      }
     };
   }, []);
 

@@ -35,11 +35,24 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
     }
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const url = `${API_BASE_URL}${path}`;
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.log('[api]', method, url);
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (e: any) {
+    // eslint-disable-next-line no-console
+    console.warn('[api] fetch failed:', method, url, '→', e?.message ?? e);
+    throw e;
+  }
 
   const data = await res.json();
 
