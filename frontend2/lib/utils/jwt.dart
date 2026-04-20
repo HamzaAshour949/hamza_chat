@@ -7,7 +7,9 @@ class Jwt {
       final parts = token.split('.');
       if (parts.length != 3) return null;
       var payload = parts[1];
-      // base64url-decode, padding.
+      // base64Url.decode requires the input length to be a multiple of 4.
+      // JWT payloads are emitted without `=` padding, so pad here based on
+      // (length mod 4): remainder 2 → add "==", remainder 3 → add "=".
       switch (payload.length % 4) {
         case 2:
           payload += '==';

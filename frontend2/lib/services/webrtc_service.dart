@@ -14,15 +14,16 @@ class WebRTCService {
     return createPeerConnection(iceConfig);
   }
 
-  /// Low-bandwidth constraints: 240×320, 15 fps, front camera.
+  /// Low-bandwidth constraints: 240p landscape (320×240), 15 fps, front camera.
+  /// Matches the Expo app's low-bandwidth video target (240p, 15 fps, H.264).
   static Future<MediaStream> getLocalStream({required bool video}) async {
     final constraints = <String, dynamic>{
       'audio': true,
       'video': video
           ? {
               'facingMode': 'user',
-              'width': {'ideal': 240},
-              'height': {'ideal': 320},
+              'width': {'ideal': 320},
+              'height': {'ideal': 240},
               'frameRate': {'ideal': 15, 'max': 15},
             }
           : false,
