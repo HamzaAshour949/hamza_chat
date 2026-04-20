@@ -185,10 +185,8 @@ function ChatWrapper({
       <AttachmentMenu
         visible={showAttachment}
         onClose={() => setShowAttachment(false)}
-        onPickGallery={() => { setShowAttachment(false); mediaSend.pickImage(); }}
-        onOpenCamera={() => { setShowAttachment(false); mediaSend.takePhoto(); }}
-        onPickVideo={() => { setShowAttachment(false); mediaSend.pickVideo(); }}
-        onRecordVideo={() => { setShowAttachment(false); mediaSend.recordVideo(); }}
+        onTakePhoto={() => { setShowAttachment(false); mediaSend.takePhoto(); }}
+        onCaptureVideo={() => { setShowAttachment(false); mediaSend.captureVideo(); }}
         onPickFile={() => { setShowAttachment(false); mediaSend.pickFile(); }}
       />
       <VoiceRecorder

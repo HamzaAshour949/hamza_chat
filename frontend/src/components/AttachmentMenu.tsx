@@ -4,9 +4,8 @@
  * Layout:
  *  - Semi-transparent overlay (rgba(0,0,0,0.5)), tap to dismiss
  *  - Bottom sheet: #1F2C33 surface, top-radius 16, padding 24
- *  - 2×3 grid of circular icon options (48dp circle on #2A3942)
- *    Row 1: Gallery, Camera, Video
- *    Row 2: Record Video, File, Cancel (danger red)
+ *  - Single row of four circular icon options (48dp circle on #2A3942):
+ *    Photo (camera), Video (camera), File (any), Cancel (red)
  *  - Each option ≥ 80×80 dp touch target
  */
 
@@ -23,10 +22,8 @@ import { Ionicons } from '@expo/vector-icons';
 interface AttachmentMenuProps {
   visible: boolean;
   onClose: () => void;
-  onPickGallery: () => void;
-  onOpenCamera: () => void;
-  onPickVideo: () => void;
-  onRecordVideo: () => void;
+  onTakePhoto: () => void;
+  onCaptureVideo: () => void;
   onPickFile: () => void;
 }
 
@@ -56,20 +53,13 @@ function OptionButton({ icon, label, onPress, iconColor }: MenuOption) {
 export default function AttachmentMenu({
   visible,
   onClose,
-  onPickGallery,
-  onOpenCamera,
-  onPickVideo,
-  onRecordVideo,
+  onTakePhoto,
+  onCaptureVideo,
   onPickFile,
 }: AttachmentMenuProps) {
-  const row1: MenuOption[] = [
-    { icon: 'images', label: 'Gallery', onPress: onPickGallery, iconColor: '#00A884' },
-    { icon: 'camera', label: 'Camera', onPress: onOpenCamera, iconColor: '#00A884' },
-    { icon: 'videocam', label: 'Video', onPress: onPickVideo, iconColor: '#00A884' },
-  ];
-
-  const row2: MenuOption[] = [
-    { icon: 'film', label: 'Record Video', onPress: onRecordVideo, iconColor: '#00A884' },
+  const options: MenuOption[] = [
+    { icon: 'camera', label: 'Photo', onPress: onTakePhoto, iconColor: '#00A884' },
+    { icon: 'videocam', label: 'Video', onPress: onCaptureVideo, iconColor: '#00A884' },
     { icon: 'document', label: 'File', onPress: onPickFile, iconColor: '#00A884' },
     { icon: 'close-circle', label: 'Cancel', onPress: onClose, iconColor: '#F15C6D' },
   ];
@@ -88,17 +78,10 @@ export default function AttachmentMenu({
         accessibilityRole="button"
       >
         <Pressable style={styles.sheet} onPress={() => {}}>
-          <View style={styles.grid}>
-            <View style={styles.row}>
-              {row1.map((opt) => (
-                <OptionButton key={opt.label} {...opt} />
-              ))}
-            </View>
-            <View style={styles.row}>
-              {row2.map((opt) => (
-                <OptionButton key={opt.label} {...opt} />
-              ))}
-            </View>
+          <View style={styles.row}>
+            {options.map((opt) => (
+              <OptionButton key={opt.label} {...opt} />
+            ))}
           </View>
         </Pressable>
       </Pressable>
@@ -117,9 +100,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 24,
-  },
-  grid: {
-    gap: 16,
   },
   row: {
     flexDirection: 'row',
@@ -145,3 +125,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 });
+

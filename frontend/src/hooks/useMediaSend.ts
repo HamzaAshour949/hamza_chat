@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import {
@@ -97,101 +98,110 @@ export function useMediaSend(partnerId: number, addOptimisticMessage: (msg: any)
     }
   }, [partnerId, user, addOptimisticMessage]);
 
-  const pickImage = useCallback(async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-    });
-    if (result.canceled || !result.assets[0]) return;
-
-    const asset = result.assets[0];
-    const compressed = await compressImage(asset.uri);
-    const thumb = await generateThumbnail(compressed);
-    await sendMedia(compressed, 'image', 'image/jpeg', 'photo.jpg', thumb);
-  }, [sendMedia]);
-
   const takePhoto = useCallback(async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) return;
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Camera permission needed',
+          'Please allow camera access to take photos.'
+        );
+        return;
+      }
 
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 0.7,
-    });
-    if (result.canceled || !result.assets[0]) return;
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.7,
+      });
+      if (result.canceled || !result.assets[0]) return;
 
-    const asset = result.assets[0];
-    const compressed = await compressImage(asset.uri);
-    const thumb = await generateThumbnail(compressed);
-    await sendMedia(compressed, 'image', 'image/jpeg', 'photo.jpg', thumb);
+      const asset = result.assets[0];
+      const compressed = await compressImage(asset.uri);
+      const thumb = await generateThumbnail(compressed).catch(() => '');
+      await sendMedia(compressed, 'image', 'image/jpeg', 'photo.jpg', thumb || null);
+    } catch (e: any) {
+      console.error('takePhoto failed:', e);
+      Alert.alert('Camera error', e?.message ?? 'Could not capture photo.');
+    }
   }, [sendMedia]);
 
-  const pickVideo = useCallback(async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['videos'],
-      quality: 0.5,
-      videoMaxDuration: 15,
-    });
-    if (result.canceled || !result.assets[0]) return;
+  const captureVideo = useCallback(async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Camera permission needed',
+          'Please allow camera access to record video.'
+        );
+        return;
+      }
 
-    const asset = result.assets[0];
-    const thumb = await generateVideoThumbnail(asset.uri);
-    await sendMedia(asset.uri, 'video', 'video/mp4', 'video.mp4', thumb || null);
-  }, [sendMedia]);
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['videos'],
+        quality: 0.5,
+        videoMaxDuration: 15,
+      });
+      if (result.canceled || !result.assets[0]) return;
 
-  const recordVideo = useCallback(async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) return;
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['videos'],
-      quality: 0.5,
-      videoMaxDuration: 15,
-    });
-    if (result.canceled || !result.assets[0]) return;
-
-    const asset = result.assets[0];
-    const thumb = await generateVideoThumbnail(asset.uri);
-    await sendMedia(asset.uri, 'video', 'video/mp4', 'video.mp4', thumb || null);
+      const asset = result.assets[0];
+      const thumb = await generateVideoThumbnail(asset.uri).catch(() => '');
+      await sendMedia(asset.uri, 'video', 'video/mp4', 'video.mp4', thumb || null);
+    } catch (e: any) {
+      console.error('captureVideo failed:', e);
+      Alert.alert('Camera error', e?.message ?? 'Could not record video.');
+    }
   }, [sendMedia]);
 
   const pickFile = useCallback(async () => {
-    // Allow sharing any file type. If the user picks an image or video the
-    // chat bubble will still render a thumbnail because we generate one here.
-    const result = await DocumentPicker.getDocumentAsync({
-      type: '*/*',
-      copyToCacheDirectory: true,
-    });
-    if (result.canceled || !result.assets[0]) return;
-
-    const asset = result.assets[0];
-    const mimeType = asset.mimeType || 'application/octet-stream';
-    const fileName = asset.name || 'file';
-
-    if (mimeType.startsWith('image/')) {
-      const thumb = await generateThumbnail(asset.uri).catch((e) => {
-        console.warn('Image thumbnail generation failed:', e);
-        return '';
+    // Single unified picker for any file (photo, video, doc, audio, ...).
+    // When the user picks an image or video we still generate an inline
+    // thumbnail so the chat bubble previews it immediately.
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
       });
-      await sendMedia(asset.uri, 'image', mimeType, fileName, thumb || null);
-      return;
-    }
+      if (result.canceled || !result.assets[0]) return;
 
-    if (mimeType.startsWith('video/')) {
-      const thumb = await generateVideoThumbnail(asset.uri).catch((e) => {
-        console.warn('Video thumbnail generation failed:', e);
-        return '';
-      });
-      await sendMedia(asset.uri, 'video', mimeType, fileName, thumb || null);
-      return;
-    }
+      const asset = result.assets[0];
+      const mimeType = asset.mimeType || 'application/octet-stream';
+      const fileName = asset.name || 'file';
 
-    await sendMedia(asset.uri, 'file', mimeType, fileName, null);
+      if (mimeType.startsWith('image/')) {
+        const thumb = await generateThumbnail(asset.uri).catch((e) => {
+          console.warn('Image thumbnail generation failed:', e);
+          return '';
+        });
+        await sendMedia(asset.uri, 'image', mimeType, fileName, thumb || null);
+        return;
+      }
+
+      if (mimeType.startsWith('video/')) {
+        const thumb = await generateVideoThumbnail(asset.uri).catch((e) => {
+          console.warn('Video thumbnail generation failed:', e);
+          return '';
+        });
+        await sendMedia(asset.uri, 'video', mimeType, fileName, thumb || null);
+        return;
+      }
+
+      await sendMedia(asset.uri, 'file', mimeType, fileName, null);
+    } catch (e: any) {
+      console.error('pickFile failed:', e);
+      Alert.alert('File error', e?.message ?? 'Could not attach file.');
+    }
   }, [sendMedia]);
 
   const startRecording = useCallback(async () => {
     try {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
-      if (!permission.granted) return;
+      if (!permission.granted) {
+        Alert.alert(
+          'Microphone permission needed',
+          'Please allow microphone access to record voice messages.'
+        );
+        return;
+      }
 
       await setAudioModeAsync({
         allowsRecording: true,
@@ -201,8 +211,10 @@ export function useMediaSend(partnerId: number, addOptimisticMessage: (msg: any)
       await recorder.prepareToRecordAsync();
       recorder.record();
       setIsRecording(true);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to start recording:', e);
+      setIsRecording(false);
+      Alert.alert('Recording error', e?.message ?? 'Could not start recording.');
     }
   }, [recorder]);
 
@@ -218,9 +230,10 @@ export function useMediaSend(partnerId: number, addOptimisticMessage: (msg: any)
       if (uri) {
         await sendMedia(uri, 'voice', 'audio/m4a', 'voice.m4a', null);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to stop recording:', e);
       setIsRecording(false);
+      Alert.alert('Recording error', e?.message ?? 'Could not save recording.');
     }
   }, [isRecording, recorder, sendMedia]);
 
@@ -235,10 +248,8 @@ export function useMediaSend(partnerId: number, addOptimisticMessage: (msg: any)
   }, [isRecording, recorder]);
 
   return {
-    pickImage,
     takePhoto,
-    pickVideo,
-    recordVideo,
+    captureVideo,
     pickFile,
     startRecording,
     stopRecording,
