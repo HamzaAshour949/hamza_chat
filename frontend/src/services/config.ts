@@ -1,13 +1,25 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-// Production: set API_HOST env var at build time (e.g. API_HOST=myserver.com eas build).
+// Production: set API_BASE_URL and WS_URL at build time, e.g.
+// API_BASE_URL=https://chat.example.com WS_URL=https://chat.example.com eas build.
+// API_HOST remains a convenience for local direct-port builds.
 // Development on a real device: Expo / dev-client inject the laptop's LAN IP via
 // `hostUri` (dev client) or `debuggerHost` (Expo Go).
 // Development on emulator: falls back to the standard loopback alias.
+function extraString(name: string): string | null {
+  const extra = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
+  const value = extra?.[name];
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function withoutTrailingSlash(url: string): string {
+  return url.endsWith('/') ? url.slice(0, -1) : url;
+}
+
 function resolveHost(): string {
   // 1. Explicit host baked in at build time (production / staging)
-  const buildHost = Constants.expoConfig?.extra?.API_HOST;
+  const buildHost = extraString('API_HOST');
   if (typeof buildHost === 'string' && buildHost.length > 0) return buildHost;
 
   // 2. Dev build / Expo Go — Metro provides the host of the dev machine.
@@ -45,9 +57,13 @@ function resolveHost(): string {
 }
 
 const HOST = resolveHost();
+const EXPLICIT_API_BASE_URL = extraString('API_BASE_URL');
+const EXPLICIT_WS_URL = extraString('WS_URL');
 
-export const API_BASE_URL = `http://${HOST}:3001`;
-export const WS_URL = `http://${HOST}:3000`;
+export const API_BASE_URL = EXPLICIT_API_BASE_URL
+  ? withoutTrailingSlash(EXPLICIT_API_BASE_URL)
+  : `http://${HOST}:5101`;
+export const WS_URL = EXPLICIT_WS_URL ? withoutTrailingSlash(EXPLICIT_WS_URL) : `http://${HOST}:5100`;
 
 if (__DEV__) {
   // eslint-disable-next-line no-console

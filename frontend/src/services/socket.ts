@@ -19,9 +19,11 @@ export function connectSocket(token: string): Socket {
     transports: ['websocket'],
     autoConnect: true,
   });
+  (socket as any).authenticated = false;
 
   socket.on('connect', () => {
     console.log('[socket] connected');
+    (socket as any).authenticated = false;
     socket?.emit('authenticate', { token });
   });
 
@@ -31,10 +33,12 @@ export function connectSocket(token: string): Socket {
 
   socket.on('disconnect', (reason: string) => {
     console.log('[socket] disconnected:', reason);
+    if (socket) (socket as any).authenticated = false;
   });
 
   socket.on('authenticated', (data: { userId: number }) => {
     console.log('[socket] authenticated:', data.userId);
+    if (socket) (socket as any).authenticated = true;
     flushQueue();
   });
 
@@ -44,6 +48,7 @@ export function connectSocket(token: string): Socket {
 
   socket.on('auth_error', (data: { message: string }) => {
     console.error('Socket auth error:', data.message);
+    if (socket) (socket as any).authenticated = false;
   });
 
   return socket;

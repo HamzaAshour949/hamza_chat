@@ -28,11 +28,20 @@ Copy `.env.example` to `.env` in the repo root and fill in your secrets:
 cp .env.example .env
 ```
 
-At minimum, set a strong `JWT_SECRET` and your Brevo credentials for the
-email-verification flow:
+Set every placeholder value before starting Docker. The backend fails fast if
+database settings are missing, or if `JWT_SECRET` is empty, shorter than 32
+characters, or still set to the old development default.
 
 | Var | Purpose |
 |-----|---------|
+| `MYSQL_ROOT_PASSWORD` | Strong MySQL root password used when the MySQL volume is first initialized. |
+| `DB_HOST` | Database host from the app container. Use `mysql` for Docker Compose. |
+| `DB_PORT` | Database port from the app container. Use `3306` for Docker Compose. |
+| `DB_NAME` | Application database name. |
+| `DB_USER` | Application database user. |
+| `DB_PASS` | Strong password for the application database user. |
+| `JWT_SECRET` | Required signing secret for JWTs. Generate one with `openssl rand -hex 32`. |
+| `CORS_ALLOW_ORIGIN` | Allowed browser origin for REST/media responses. Use `*` for native-only/local development, or an exact HTTPS origin for web deployments. |
 | `BREVO_API_KEY` | Brevo transactional-email API key (see https://app.brevo.com/settings/keys/api). If left empty, the server logs the 6-digit code to stdout instead of emailing it — handy for development. |
 | `BREVO_SENDER_EMAIL` | The "From" address for verification emails. Must be a Brevo-verified sender. |
 | `BREVO_SENDER_NAME` | Display name on the verification emails (default: `ChatApp`). |
@@ -46,7 +55,7 @@ docker compose up --build
 
 **Expected output:**
 - MySQL initializes and becomes healthy (check logs for `Health check passed`)
-- PHP Workerman starts and logs `Listen on http://0.0.0.0:3000 transport tcp`
+- PHP Workerman starts Socket.IO on port 5100 and logs `HTTP API listening on port 5101`
 - Nginx reverse proxy starts on port 80
 - No errors in logs
 
@@ -54,13 +63,13 @@ If Docker Desktop is not installed, download and install it first from [docker.c
 
 **Verify backend is running:**
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:5101/health
 # Should respond: {"status":"ok"}
 ```
 
 **Test auth endpoint:**
 ```bash
-curl -X POST http://localhost:3000/auth/login \
+curl -X POST http://localhost:5101/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test1@test.com","password":"password123"}'
 
@@ -234,7 +243,7 @@ frontend/
 - Docker Desktop is not installed
 - **Solution**: Download from [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop)
 
-### "Cannot connect to http://localhost:3000"
+### "Cannot connect to http://localhost:5101"
 - Backend is not running
 - **Solution**: Ensure `docker compose up --build` is running and MySQL is healthy (`Health check passed` in logs)
 
@@ -287,7 +296,7 @@ Create cert/key files and uncomment the HTTPS server block in `nginx/nginx.conf`
 ### Make a Backend Change
 1. Edit `/backend/start.php`
 2. Restart: `docker compose restart app`
-3. Test with: `curl http://localhost:3000/health`
+3. Test with: `curl http://localhost:5101/health`
 
 ### Make a Frontend Change
 1. Edit files in `/frontend/src/`

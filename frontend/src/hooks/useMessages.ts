@@ -36,52 +36,89 @@ export function useMessages(partnerId: number) {
 
   useEffect(() => {
     if (!user) return;
+    hasMore.current = true;
+    let cancelled = false;
+    let attachedSocket: ReturnType<typeof getSocket> | null = null;
+
     loadCachedMessages();
     syncFromServer();
 
-    const socket = getSocket();
-    if (socket) {
-      const handleNewMessage = (msg: any) => {
-        if (msg.from === partnerId || msg.to === partnerId) {
-          const localMsg = {
-            id: String(msg.id),
-            serverId: msg.id,
-            from: msg.from,
-            to: msg.to,
-            type: msg.type,
-            content: msg.content,
-            mediaUrl: msg.mediaUrl,
-            thumbnail: msg.thumbnail,
-            mimeType: msg.mimeType,
-            fileName: msg.fileName,
-            fileSize: msg.fileSize,
-            createdAt: msg.createdAt,
-            status: 'sent',
-          };
-          messageStore.saveMessage(localMsg);
-          setMessages((prev) => [localMsg, ...prev]);
-        }
-      };
+    const handleNewMessage = (msg: any) => {
+      if (msg.from === partnerId || msg.to === partnerId) {
+        const localMsg = {
+          id: String(msg.id),
+          serverId: msg.id,
+          from: msg.from,
+          to: msg.to,
+          type: msg.type,
+          content: msg.content,
+          mediaUrl: msg.mediaUrl,
+          thumbnail: msg.thumbnail,
+          mimeType: msg.mimeType,
+          fileName: msg.fileName,
+          fileSize: msg.fileSize,
+          createdAt: msg.createdAt,
+          status: 'sent',
+        };
+        messageStore.saveMessage(localMsg);
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === localMsg.id || m.serverId === localMsg.serverId)) {
+            return prev;
+          }
+          return [localMsg, ...prev];
+        });
+      }
+    };
 
-      const handleMessageSent = (ack: any) => {
-        messageStore.updateMessageServerId(ack.localId, ack.id, ack.createdAt);
-        setMessages((prev) =>
-          prev.map((m) =>
+    const handleMessageSent = (ack: any) => {
+      messageStore.updateMessageServerId(ack.localId, ack.id, ack.createdAt);
+      setMessages((prev) => {
+        const updated = prev.map((m) =>
             m.id === ack.localId
-              ? { ...m, serverId: ack.id, createdAt: ack.createdAt, status: 'sent' }
+              ? { ...m, id: String(ack.id), serverId: ack.id, createdAt: ack.createdAt, status: 'sent' }
               : m
-          )
         );
-      };
+        const seen = new Set<string>();
+        return updated.filter((m) => {
+          const key = m.serverId ? `server:${m.serverId}` : m.id;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      });
+    };
+
+    const attach = (socket: NonNullable<ReturnType<typeof getSocket>>) => {
+      if (cancelled || attachedSocket === socket) return;
+      attachedSocket = socket;
 
       socket.on('new_message', handleNewMessage);
       socket.on('message_sent', handleMessageSent);
+    };
 
-      return () => {
-        socket.off('new_message', handleNewMessage);
-        socket.off('message_sent', handleMessageSent);
-      };
+    const socket = getSocket();
+    if (socket) {
+      attach(socket);
     }
+
+    const interval = socket
+      ? null
+      : setInterval(() => {
+          const nextSocket = getSocket();
+          if (nextSocket) {
+            clearInterval(interval!);
+            attach(nextSocket);
+          }
+        }, 200);
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+      if (attachedSocket) {
+        attachedSocket.off('new_message', handleNewMessage);
+        attachedSocket.off('message_sent', handleMessageSent);
+      }
+    };
   }, [partnerId, user]);
 
   async function loadCachedMessages() {
@@ -120,12 +157,13 @@ export function useMessages(partnerId: number) {
       }
 
       setMessages((prev) => {
-        const pending = prev.filter((m) => m.status === 'pending');
+        const pending = prev.filter((m) => m.status === 'pending' || m.status === 'failed');
         const merged = [...pending, ...serverMsgs];
         const seen = new Set<string>();
         return merged.filter((m) => {
-          if (seen.has(m.id)) return false;
-          seen.add(m.id);
+          const key = m.serverId ? `server:${m.serverId}` : m.id;
+          if (seen.has(key)) return false;
+          seen.add(key);
           return true;
         });
       });
@@ -166,7 +204,16 @@ export function useMessages(partnerId: number) {
       for (const msg of olderMsgs) {
         await messageStore.saveMessage(msg);
       }
-      setMessages((prev) => [...prev, ...olderMsgs]);
+      setMessages((prev) => {
+        const merged = [...prev, ...olderMsgs];
+        const seen = new Set<string>();
+        return merged.filter((m) => {
+          const key = m.serverId ? `server:${m.serverId}` : m.id;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      });
     } catch (e) {
       console.error('Failed to load more:', e);
     } finally {

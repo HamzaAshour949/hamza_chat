@@ -9,14 +9,14 @@ WhatsApp-style 1-to-1 messaging app engineered for ultra-low bandwidth (5–10 K
 | Layer | Technology |
 |-------|------------|
 | Frontend | Expo (React Native), TypeScript |
-| Backend | PHP (Workerman — HTTP + WebSocket on single port 3000) |
+| Backend | PHP (Workerman — Socket.IO on port 5100 + REST API on port 5101) |
 | Database | MySQL |
 | Real-time | Socket.io protocol, WebSocket-only transport (no long-polling) |
 | Infra | Docker Compose (app + MySQL), Nginx reverse proxy with TLS |
 
 ## Architecture
 
-- **Single port backend**: One Workerman process serves REST API and WebSocket on port 3000. No separate socket server.
+- **Single process backend**: One Workerman process serves Socket.IO on port 5100 and the REST API on port 5101. No separate socket server process.
 - **Simple DB schema**: `users` + `messages` tables only. No over-engineering.
 - **Stateless JWT auth**: Signed JWT with `userId` + expiry (30-day). No sessions, no refresh tokens.
 - **Media uploads**: Multipart form to `/media/upload`, UUID filenames on disk, served via `/media/:filename`.
@@ -68,8 +68,8 @@ cd frontend && npx expo start
 # Set TEST_ACCOUNT=0 or TEST_ACCOUNT=1 to auto-login during development
 ```
 
-- Android emulator: `10.0.2.2:3000` to reach host
-- iOS simulator: `127.0.0.1:3000`
+- Android emulator: `10.0.2.2:5100` for WebSocket and `10.0.2.2:5101` for REST
+- iOS simulator: `127.0.0.1:5100` for WebSocket and `127.0.0.1:5101` for REST
 
 ## Constraints
 

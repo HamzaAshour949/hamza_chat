@@ -180,7 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (loading || user) return;
 
     const testAccount = Constants.expoConfig?.extra?.TEST_ACCOUNT;
-    if (testAccount !== undefined && testAccount !== null) {
+    if (testAccount === '0' || testAccount === '1') {
       const accounts = [
         { email: 'test1@test.com', password: 'password123' },
         { email: 'test2@test.com', password: 'password123' },

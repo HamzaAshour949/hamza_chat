@@ -82,9 +82,20 @@ class MessageStore {
     int serverId,
     String createdAt,
   ) async {
+    final serverKey = serverId.toString();
+    await _require.delete(
+      'messages',
+      where: 'id = ? AND id != ?',
+      whereArgs: [serverKey, localId],
+    );
     await _require.update(
       'messages',
-      {'server_id': serverId, 'created_at': createdAt, 'status': 'sent'},
+      {
+        'id': serverKey,
+        'server_id': serverId,
+        'created_at': createdAt,
+        'status': 'sent',
+      },
       where: 'id = ?',
       whereArgs: [localId],
     );

@@ -89,8 +89,10 @@ export async function updateMessageServerId(
   createdAt: string
 ): Promise<void> {
   if (!db) return;
+  const serverKey = String(serverId);
+  await db.runAsync(`DELETE FROM messages WHERE id = ? AND id != ?`, [serverKey, localId]);
   await db.runAsync(
-    `UPDATE messages SET server_id = ?, created_at = ?, status = 'sent' WHERE id = ?`,
-    [serverId, createdAt, localId]
+    `UPDATE messages SET id = ?, server_id = ?, created_at = ?, status = 'sent' WHERE id = ?`,
+    [serverKey, serverId, createdAt, localId]
   );
 }

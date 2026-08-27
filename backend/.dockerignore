@@ -1,0 +1,10 @@
+.git
+.gitignore
+.DS_Store
+.env
+.env.*
+vendor/
+uploads/*
+!uploads/.gitkeep
+*.log
+Dockerfile

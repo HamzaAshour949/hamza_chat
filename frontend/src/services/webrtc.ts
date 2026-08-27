@@ -16,6 +16,18 @@ import { View } from 'react-native';
 let webrtc: any = null;
 let webrtcLoadError: Error | null = null;
 
+export interface MediaTrack {
+  enabled: boolean;
+  stop: () => void;
+}
+
+export interface MediaStream {
+  toURL: () => string;
+  getTracks: () => MediaTrack[];
+  getAudioTracks: () => MediaTrack[];
+  getVideoTracks: () => MediaTrack[];
+}
+
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
   webrtc = require('react-native-webrtc');
@@ -91,7 +103,7 @@ export function createPeerConnection(): any {
   return new webrtc.RTCPeerConnection(iceConfig);
 }
 
-export async function getLocalStream(video: boolean): Promise<any> {
+export async function getLocalStream(video: boolean): Promise<MediaStream> {
   if (!webrtc) unavailable('getLocalStream');
   return await webrtc.mediaDevices.getUserMedia({
     audio: true,

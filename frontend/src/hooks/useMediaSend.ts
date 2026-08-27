@@ -80,6 +80,15 @@ export function useMediaSend(partnerId: number, addOptimisticMessage: (msg: any)
 
     try {
       const result = await uploadMedia(uri, mimeType, fileName);
+      const uploadedMsg = {
+        ...optimisticMsg,
+        mediaUrl: result.url,
+        mimeType: result.mimeType,
+        fileName: result.filename,
+        fileSize: result.size,
+      };
+      await messageStore.saveMessage(uploadedMsg);
+      addOptimisticMessage(uploadedMsg);
 
       enqueueMessage('send_message', {
         to: partnerId,
@@ -93,7 +102,9 @@ export function useMediaSend(partnerId: number, addOptimisticMessage: (msg: any)
         fileSize: result.size,
       });
     } catch (e) {
-      addOptimisticMessage({ ...optimisticMsg, status: 'failed' });
+      const failedMsg = { ...optimisticMsg, status: 'failed' };
+      await messageStore.saveMessage(failedMsg);
+      addOptimisticMessage(failedMsg);
       console.error('Media send failed:', e);
     }
   }, [partnerId, user, addOptimisticMessage]);

@@ -176,16 +176,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
 
     if (list.conversations.isEmpty) {
-      return Center(
+      return const Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+          padding: EdgeInsets.symmetric(horizontal: 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.chat_bubble_outline,
+              Icon(Icons.chat_bubble_outline,
                   size: 64, color: AppColors.secondaryText),
-              const SizedBox(height: 16),
-              const Text(
+              SizedBox(height: 16),
+              Text(
                 'No conversations yet',
                 style: TextStyle(
                   fontSize: 17,
@@ -193,8 +193,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   color: AppColors.secondaryText,
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
+              SizedBox(height: 8),
+              Text(
                 'Search for a user by email to start chatting',
                 textAlign: TextAlign.center,
                 style: TextStyle(

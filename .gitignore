@@ -1,5 +1,13 @@
 # Dependencies
 backend/vendor/
+frontend/node_modules/
+
+# Local Expo and native build metadata
+frontend/.expo/
+frontend/android/.kotlin/
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/.gradle/
 
 # Environment variables
 .env
@@ -15,4 +23,4 @@ mysql_data/
 # OS files
 .DS_Store
 
-node_modules
+node_modules/

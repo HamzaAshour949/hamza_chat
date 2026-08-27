@@ -1,4 +1,6 @@
 <?php
+error_reporting(E_ALL & ~E_DEPRECATED);
+
 require __DIR__ . '/vendor/autoload.php';
 
 use Workerman\Worker;
@@ -12,14 +14,22 @@ use Firebase\JWT\Key;
 // ---------------------------------------------------------------------------
 // Database helper
 // ---------------------------------------------------------------------------
+function requiredEnv(string $name): string {
+    $value = trim((string) getenv($name));
+    if ($value === '') {
+        throw new RuntimeException("$name must be set.");
+    }
+    return $value;
+}
+
 function getDB() {
     static $pdo = null;
     if ($pdo === null) {
-        $host = getenv('DB_HOST') ?: 'mysql';
-        $port = getenv('DB_PORT') ?: '3306';
-        $db   = getenv('DB_NAME') ?: 'chatapp';
-        $user = getenv('DB_USER') ?: 'chatapp';
-        $pass = getenv('DB_PASS') ?: 'chatapp_pass';
+        $host = requiredEnv('DB_HOST');
+        $port = requiredEnv('DB_PORT');
+        $db   = requiredEnv('DB_NAME');
+        $user = requiredEnv('DB_USER');
+        $pass = requiredEnv('DB_PASS');
         $dsn  = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
         $pdo  = new PDO($dsn, $user, $pass, [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -33,7 +43,21 @@ function getDB() {
 // JWT helpers
 // ---------------------------------------------------------------------------
 function getJWTSecret(): string {
-    return getenv('JWT_SECRET') ?: 'chatapp_dev_secret_key_change_in_production';
+    $secret = requiredEnv('JWT_SECRET');
+    if ($secret === 'chatapp_dev_secret_key_change_in_production') {
+        throw new RuntimeException('JWT_SECRET must be set to a strong, non-default value.');
+    }
+    if (strlen($secret) < 32) {
+        throw new RuntimeException('JWT_SECRET must be at least 32 characters long.');
+    }
+    return $secret;
+}
+
+function validateRuntimeConfig(): void {
+    foreach (['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS'] as $name) {
+        requiredEnv($name);
+    }
+    getJWTSecret();
 }
 
 function createJWT(int $userId): string {
@@ -66,22 +90,29 @@ function authenticateHTTP(Request $request): ?int {
     return isset($payload['userId']) ? (int) $payload['userId'] : null;
 }
 
-function jsonResponse(int $status, array $data): Response {
-    return new Response($status, [
-        'Content-Type'                 => 'application/json',
-        'Access-Control-Allow-Origin'  => '*',
+function corsOrigin(): string {
+    $origin = trim((string) getenv('CORS_ALLOW_ORIGIN'));
+    return $origin !== '' ? $origin : '*';
+}
+
+function corsHeaders(array $headers = []): array {
+    return array_merge([
+        'Access-Control-Allow-Origin'  => corsOrigin(),
         'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers' => 'Content-Type, Authorization',
-    ], json_encode($data));
+    ], $headers);
+}
+
+function jsonResponse(int $status, array $data): Response {
+    return new Response($status, corsHeaders([
+        'Content-Type' => 'application/json',
+    ]), json_encode($data));
 }
 
 function corsResponse(): Response {
-    return new Response(204, [
-        'Content-Type'                 => 'text/plain',
-        'Access-Control-Allow-Origin'  => '*',
-        'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers' => 'Content-Type, Authorization',
-    ], '');
+    return new Response(204, corsHeaders([
+        'Content-Type' => 'text/plain',
+    ]), '');
 }
 
 function getMimeTypeForExtension(string $ext): string {
@@ -519,7 +550,18 @@ function handleRequest(TcpConnection $connection, Request $request): void {
 
             $tmpPath      = $files['tmp_name'];
             $originalName = basename($files['name'] ?? 'upload');
-            $mimeType     = $files['type'] ?? '';
+            $clientMime   = $files['type'] ?? '';
+            $mimeType     = $clientMime;
+            if (function_exists('finfo_open')) {
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                if ($finfo) {
+                    $detectedMime = finfo_file($finfo, $tmpPath);
+                    finfo_close($finfo);
+                    if (is_string($detectedMime) && $detectedMime !== '') {
+                        $mimeType = $detectedMime;
+                    }
+                }
+            }
             $fileSize     = $files['size'] ?? 0;
 
             $maxSize = 20 * 1024 * 1024; // 20 MB
@@ -587,7 +629,7 @@ function handleRequest(TcpConnection $connection, Request $request): void {
             $connection->send(new Response(200, [
                 'Content-Type'                => $mime,
                 'Cache-Control'               => 'public, max-age=86400',
-                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Allow-Origin' => corsOrigin(),
             ], $fileContent));
             return;
         }
@@ -614,12 +656,14 @@ function handleRequest(TcpConnection $connection, Request $request): void {
 // ---------------------------------------------------------------------------
 // Online users map: userId => $socket
 // ---------------------------------------------------------------------------
+validateRuntimeConfig();
+
 $onlineUsers = [];
 
 // ---------------------------------------------------------------------------
-// SocketIO server on port 3000 (WebSocket only)
+// SocketIO server on port 5100 (WebSocket only)
 // ---------------------------------------------------------------------------
-$io = new SocketIO(3000);
+$io = new SocketIO(5100);
 
 // ---------------------------------------------------------------------------
 // WebSocket events
@@ -671,7 +715,7 @@ $io->on('connection', function ($socket) use ($io, &$onlineUsers) {
         $userId    = (int) $socket->userId;
         $to        = isset($data['to']) ? (int) $data['to'] : 0;
         $type      = $data['type'] ?? 'text';
-        $content   = $data['content'] ?? '';
+        $content   = $data['content'] ?? null;
         $localId   = $data['localId'] ?? null;
         $thumbnail = $data['thumbnail'] ?? null;
         $mediaUrl  = $data['mediaUrl'] ?? null;
@@ -691,6 +735,13 @@ $io->on('connection', function ($socket) use ($io, &$onlineUsers) {
         if ($type === 'text' && (!is_string($content) || trim($content) === '')) {
             $socket->emit('error', ['message' => 'Content cannot be empty']);
             return;
+        }
+        if ($type === 'text' && strlen($content) > 4096) {
+            $socket->emit('error', ['message' => 'Content is too long']);
+            return;
+        }
+        if ($type !== 'text' && $content !== null && !is_string($content)) {
+            $content = null;
         }
 
         try {
@@ -812,19 +863,19 @@ $io->on('connection', function ($socket) use ($io, &$onlineUsers) {
 });
 
 // ---------------------------------------------------------------------------
-// Inner HTTP Worker on port 3001 (REST API)
+// Inner HTTP Worker on port 5101 (REST API)
 // Runs in the same process/event-loop as SocketIO — shares $onlineUsers.
 // ---------------------------------------------------------------------------
 $io->on('workerStart', function () use ($io) {
     TcpConnection::$defaultMaxPackageSize = 22 * 1024 * 1024;
 
-    $httpWorker = new Worker('http://0.0.0.0:3001');
+    $httpWorker = new Worker('http://0.0.0.0:5101');
     $httpWorker->onMessage = function (TcpConnection $connection, Request $request) {
         handleRequest($connection, $request);
     };
     $httpWorker->listen();
 
-    echo "HTTP API listening on port 3001\n";
+    echo "HTTP API listening on port 5101\n";
 });
 
 Worker::runAll();

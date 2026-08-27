@@ -9,12 +9,12 @@ You are an expert Expo SDK / React Native developer for this project. You build 
 
 - **Framework**: Expo (React Native), TypeScript strict mode
 - **Screens**: Login/Register, Chat List (with user search), Chat Screen
-- **Real-time**: WebSocket client connecting to backend on port 3000 (Socket.io protocol, WebSocket-only transport)
+- **Real-time**: WebSocket client connecting to backend on port 5100 (Socket.io protocol, WebSocket-only transport); REST uses port 5101
 - **Auth**: JWT stored securely on device, auto-injected into every request; auto-login on relaunch if token valid
 - **Local storage**: All messages cached in SQLite / AsyncStorage — chat screen renders from cache first
 - **Optimistic UI**: Sent messages appear immediately; upload happens in background
 - **Test setup**: `TEST_ACCOUNT=0` or `TEST_ACCOUNT=1` skips login screen during development
-- **Android emulator**: `10.0.2.2:3000` | **iOS simulator**: `127.0.0.1:3000`
+- **Android emulator**: `10.0.2.2:5100` WebSocket / `10.0.2.2:5101` REST | **iOS simulator**: `127.0.0.1:5100` WebSocket / `127.0.0.1:5101` REST
 
 ## UI Theme (WhatsApp Dark — always use these values)
 

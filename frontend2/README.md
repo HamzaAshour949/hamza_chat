@@ -1,8 +1,8 @@
 # ChatApp — Flutter frontend (frontend2)
 
 Flutter port of the Expo/React Native `frontend/` app. Talks to the **exact
-same** PHP Workerman backend (`backend/`) over REST (port 3001) and
-Socket.IO v2 / Engine.IO 3 WebSocket (port 3000). No backend changes are
+same** PHP Workerman backend (`backend/`) over REST (port 5101) and
+Socket.IO v2 / Engine.IO 3 WebSocket (port 5100). No backend changes are
 required.
 
 ## Requirements
@@ -42,20 +42,26 @@ flutter run --dart-define=TEST_ACCOUNT=0
 # Auto-login as test account 1 (test2@test.com / password123):
 flutter run --dart-define=TEST_ACCOUNT=1
 
-# Point at a remote backend (defaults otherwise: Android emulator → 10.0.2.2,
-# other platforms → 127.0.0.1):
+# Point at local direct backend ports (defaults otherwise: Android emulator →
+# 10.0.2.2, other platforms → 127.0.0.1):
 flutter run --dart-define=API_HOST=chat.example.com
+
+# Production/nginx/TLS endpoint. Socket.IO uses the same base URL because nginx
+# proxies /socket.io/ to the Workerman Socket.IO worker:
+flutter run \
+  --dart-define=API_BASE_URL=https://chat.example.com \
+  --dart-define=WS_URL=https://chat.example.com
 ```
 
-`API_HOST` drives both REST (`http://$HOST:3001`) and WebSocket
-(`http://$HOST:3000`). To talk to a public HTTPS backend, prefix with the full
-scheme by editing `lib/config/env.dart` (left intentionally simple to mirror
-the RN app).
+`API_BASE_URL` and `WS_URL` take precedence. If they are omitted, `API_HOST`
+drives REST (`http://$HOST:5101`) and WebSocket (`http://$HOST:5100`).
 
 ## Build a release APK
 
 ```bash
-flutter build apk --release --dart-define=API_HOST=myserver.com
+flutter build apk --release \
+  --dart-define=API_BASE_URL=https://chat.example.com \
+  --dart-define=WS_URL=https://chat.example.com
 ```
 
 The APK lands in `build/app/outputs/flutter-apk/app-release.apk`.

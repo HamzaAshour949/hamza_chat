@@ -49,6 +49,7 @@ app.*.map.json
 /android/gradlew.bat
 /android/gradle/wrapper/gradle-wrapper.jar
 /android/key.properties
+/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 **/android/app/google-services.json
 
 # iOS

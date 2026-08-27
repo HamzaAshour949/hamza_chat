@@ -57,7 +57,7 @@ Build a fully functional 1-to-1 chat application that works reliably on 5–10 K
 
 ## Architecture Principles
 
-- **Single port backend**: one Workerman process serves both HTTP REST and WebSocket on port 3000. No separate socket server.
+- **Single process backend**: one Workerman process serves Socket.IO on port 5100 and HTTP REST on port 5101. No separate socket server process.
 - **Simple DB schema**: `users` table + `messages` table. No over-engineering.
 - **Media uploads**: multipart form upload to `/media/upload`, files stored on disk with UUID filenames, served statically via `/media/:filename`.
 - **MIME whitelist**: only allow image/jpeg, image/png, image/webp, video/mp4, audio/mp4, audio/m4a, audio/aac, audio/opus, application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document. Max 20 MB per file.
@@ -82,7 +82,7 @@ WhatsApp dark theme:
 
 - Two test accounts pre-seeded: `test1@test.com` / `password123` and `test2@test.com` / `password123`
 - Environment variable for auto-login: `TEST_ACCOUNT=0` or `TEST_ACCOUNT=1` to skip login screen during development
-- Android emulator uses `10.0.2.2:3000` to reach host machine; iOS simulator uses `127.0.0.1:3000`
+- Android emulator uses `10.0.2.2:5100` for WebSocket and `10.0.2.2:5101` for REST; iOS simulator uses `127.0.0.1:5100` and `127.0.0.1:5101`
 
 ## Constraints
 

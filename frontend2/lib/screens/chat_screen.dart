@@ -117,6 +117,7 @@ class _ChatScreenBodyState extends State<_ChatScreenBody> {
     String? thumbnail,
   }) async {
     final messages = context.read<MessagesProvider>();
+    final socket = context.read<SocketService>();
     final localId = messages.newLocalId();
     final now = DateTime.now().toUtc().toIso8601String();
     final size = await MediaCompress.fileSize(path);
@@ -142,7 +143,7 @@ class _ChatScreenBodyState extends State<_ChatScreenBody> {
         mimeType: mimeType,
         fileName: fileName,
       );
-      context.read<SocketService>().emitOrQueue('send_message', {
+      socket.emitOrQueue('send_message', {
         'to': widget.partnerId,
         'type': messageTypeToString(type),
         'content': null,

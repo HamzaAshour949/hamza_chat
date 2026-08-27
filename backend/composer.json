@@ -2,7 +2,7 @@
   "require": {
     "workerman/workerman": "^4.1",
     "workerman/phpsocket.io": "^1.1",
-    "firebase/php-jwt": "^6.10"
+    "firebase/php-jwt": "^7.0"
   },
   "config": {
     "audit": {

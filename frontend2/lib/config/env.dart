@@ -2,11 +2,15 @@ import 'dart:io' show Platform;
 
 /// Compile-time configuration.
 ///
-/// Host resolution (mirrors `frontend/src/services/config.ts`):
-///  1. If `--dart-define=API_HOST=<host>` is provided, use it.
-///  2. Otherwise, on Android use the emulator loopback alias `10.0.2.2`.
-///  3. On iOS / other, use `127.0.0.1`.
+/// URL resolution (mirrors `frontend/src/services/config.ts`):
+///  1. Production builds may provide full `API_BASE_URL` and `WS_URL` values.
+///  2. Otherwise, `API_HOST` targets the direct local backend ports.
+///  3. Without defines, Android uses `10.0.2.2`; iOS / other use `127.0.0.1`.
 class Env {
+  static const String _apiBaseUrlDefine =
+      String.fromEnvironment('API_BASE_URL', defaultValue: '');
+  static const String _wsUrlDefine =
+      String.fromEnvironment('WS_URL', defaultValue: '');
   static const String _apiHostDefine =
       String.fromEnvironment('API_HOST', defaultValue: '');
 
@@ -25,6 +29,14 @@ class Env {
     return '127.0.0.1';
   }
 
-  static String get apiBaseUrl => 'http://$host:3001';
-  static String get wsUrl => 'http://$host:3000';
+  static String _withoutTrailingSlash(String value) =>
+      value.endsWith('/') ? value.substring(0, value.length - 1) : value;
+
+  static String get apiBaseUrl => _apiBaseUrlDefine.isNotEmpty
+      ? _withoutTrailingSlash(_apiBaseUrlDefine)
+      : 'http://$host:5101';
+
+  static String get wsUrl => _wsUrlDefine.isNotEmpty
+      ? _withoutTrailingSlash(_wsUrlDefine)
+      : 'http://$host:5100';
 }

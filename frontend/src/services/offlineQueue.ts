@@ -14,7 +14,7 @@ let queue: QueuedMessage[] = [];
 
 export function enqueueMessage(event: string, data: any): void {
   const socket = _getSocket();
-  if (socket?.connected) {
+  if (socket?.connected && socket?.authenticated) {
     socket.emit(event, data);
   } else {
     queue.push({ event, data });
@@ -23,7 +23,7 @@ export function enqueueMessage(event: string, data: any): void {
 
 export function flushQueue(): void {
   const socket = _getSocket();
-  if (!socket?.connected || queue.length === 0) return;
+  if (!socket?.connected || !socket?.authenticated || queue.length === 0) return;
 
   const batch = [...queue];
   queue = [];

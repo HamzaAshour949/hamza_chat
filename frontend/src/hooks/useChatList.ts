@@ -20,19 +20,44 @@ export function useChatList() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    let attachedSocket: ReturnType<typeof getSocket> | null = null;
+
+    const refresh = () => {
+      fetchConversations();
+    };
+
+    const attach = (socket: NonNullable<ReturnType<typeof getSocket>>) => {
+      if (cancelled || attachedSocket === socket) return;
+      attachedSocket = socket;
+      socket.on('new_message', refresh);
+      socket.on('message_sent', refresh);
+    };
+
     fetchConversations();
 
     const socket = getSocket();
     if (socket) {
-      const refresh = () => {
-        fetchConversations();
-      };
-      socket.on('new_message', refresh);
-      socket.on('message_sent', refresh);
-      return () => {
-        socket.off('new_message', refresh);
-        socket.off('message_sent', refresh);
-      };
+      attach(socket);
+    }
+
+    const interval = socket
+      ? null
+      : setInterval(() => {
+          const nextSocket = getSocket();
+          if (nextSocket) {
+            clearInterval(interval!);
+            attach(nextSocket);
+          }
+        }, 200);
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+      if (attachedSocket) {
+        attachedSocket.off('new_message', refresh);
+        attachedSocket.off('message_sent', refresh);
+      }
     }
   }, [fetchConversations]);
 

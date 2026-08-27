@@ -1,5 +1,3 @@
-import 'dart:ui' show FontFeature;
-
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
@@ -73,13 +71,13 @@ class _VoiceRecorderBarState extends State<VoiceRecorderBar>
           Expanded(
             child: InkResponse(
               onTap: widget.onCancel,
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.chevron_left,
+                  Icon(Icons.chevron_left,
                       size: 18, color: AppColors.secondaryText),
-                  const SizedBox(width: 4),
-                  const Text(
+                  SizedBox(width: 4),
+                  Text(
                     'Slide to cancel',
                     style: TextStyle(
                       color: AppColors.secondaryText,

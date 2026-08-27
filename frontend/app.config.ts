@@ -1,5 +1,10 @@
 import 'dotenv/config';
 
+function envString(name: string): string | undefined {
+  const value = process.env[name];
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
 export default {
   expo: {
     name: 'ChatApp',
@@ -23,10 +28,11 @@ export default {
       package: 'com.chatapp.app',
     },
     extra: {
-      TEST_ACCOUNT: process.env.TEST_ACCOUNT ?? null,
-      // Set this to your server's domain/IP for production builds.
-      // e.g. API_HOST=myserver.com npx eas build
-      API_HOST: process.env.API_HOST ?? null,
+      TEST_ACCOUNT: envString('TEST_ACCOUNT'),
+      // Local/dev host fallback. For production, prefer API_BASE_URL and WS_URL.
+      API_HOST: envString('API_HOST'),
+      API_BASE_URL: envString('API_BASE_URL'),
+      WS_URL: envString('WS_URL'),
     },
     plugins: [
       'expo-secure-store',

@@ -86,6 +86,7 @@ class Message {
   });
 
   Message copyWith({
+    String? id,
     int? serverId,
     String? createdAt,
     MessageStatus? status,
@@ -94,7 +95,7 @@ class Message {
     int? fileSize,
   }) =>
       Message(
-        id: id,
+        id: id ?? this.id,
         serverId: serverId ?? this.serverId,
         from: from,
         to: to,

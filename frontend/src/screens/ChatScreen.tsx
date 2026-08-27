@@ -30,6 +30,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { API_BASE_URL } from '../services/config';
 
 interface Message {
   id: string;
@@ -69,6 +70,10 @@ function formatFileSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function resolveMediaUrl(url: string): string {
+  return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+}
+
 function MediaPlaceholder({
   type,
   thumbnail,
@@ -88,7 +93,7 @@ function MediaPlaceholder({
     thumbnail && thumbnail.length > 0
       ? thumbnail
       : type === 'image' && mediaUrl
-      ? mediaUrl
+      ? resolveMediaUrl(mediaUrl)
       : null;
 
   if (previewUri) {

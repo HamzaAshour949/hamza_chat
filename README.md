@@ -1,92 +1,98 @@
-# WhatsApp Clone — Ultra-Low Bandwidth Messaging App
+# نسخة WhatsApp — تطبيق مراسلة منخفض استهلاك البيانات
 
-A fully functional WhatsApp-style 1-to-1 chat app engineered for 5–10 KB/s connections with aggressive media compression, WebSocket-only real-time messaging, and offline-first caching.
+تطبيق مراسلة فردية شبيه بـ WhatsApp، مصمم للعمل على اتصالات بسرعة 5–10 KB/s، مع ضغط قوي للوسائط، ومراسلة فورية عبر WebSocket فقط، وتخزين محلي يتيح العمل دون اتصال.
 
-## Quick Start
+## البدء السريع
 
 ```bash
-# Start backend (requires Docker Desktop)
+# إعداد الأسرار المطلوبة أولاً
+cp .env.example .env
+# عدّل .env وضع قيماً قوية لقاعدة البيانات وJWT
+
+# تشغيل الخادم الخلفي (يتطلب Docker Desktop)
 docker compose up --build
 
-# In another terminal, start frontend
+# في طرفية أخرى، شغّل الواجهة الأمامية
 cd frontend
 npx expo start
 ```
 
-Test with credentials:
-- **Email**: test1@test.com
-- **Password**: password123
+بيانات اختبار الدخول:
+- **البريد الإلكتروني**: test1@test.com
+- **كلمة المرور**: password123
 
-**→ Full setup guide in [SETUP.md](SETUP.md)**
+**→ دليل الإعداد الكامل موجود في [SETUP.md](SETUP.md)**
 
-## Tech Stack
+## التقنيات المستخدمة
 
-| Layer | Tech |
-|-------|------|
-| Frontend | Expo (React Native), TypeScript |
-| Backend | PHP 8.2 + Workerman + Socket.io |
-| Database | MySQL 8 |
-| Real-time | WebSocket-only transport (no polling) |
-| Infra | Docker Compose + Nginx |
+| الطبقة | التقنية |
+|--------|---------|
+| الواجهة الأمامية | Expo (React Native)، TypeScript |
+| الخادم الخلفي | PHP 8.2 + Workerman + Socket.io |
+| قاعدة البيانات | MySQL 8 |
+| الاتصال الفوري | WebSocket فقط (دون polling) |
+| البنية التحتية | Docker Compose + Nginx |
 
-## Key Features
+## الميزات الرئيسية
 
-✅ **Authentication** — JWT tokens, secure storage, auto-login  
-✅ **Real-time messaging** — WebSocket delivery, offline queue  
-✅ **Text messages** — Instant send/receive  
-✅ **Media** — Images (≤50KB), video (≤500KB), voice (≤30KB), files  
-✅ **Offline-first** — SQLite cache, background sync, queued sends  
-✅ **Low-bandwidth** — JPEG 50%, 240p video, 16kHz voice, 2KB thumbnails  
-✅ **User search** — Find by email  
-✅ **Conversation list** — Recent chats with last message preview  
+- **المصادقة** — رموز JWT، تخزين آمن، وتسجيل دخول تلقائي
+- **المراسلة الفورية** — تسليم عبر WebSocket وقائمة انتظار عند انقطاع الاتصال
+- **الرسائل النصية** — إرسال واستقبال فوريان
+- **الوسائط** — صور (≤50KB)، فيديو (≤500KB)، رسائل صوتية (≤30KB)، وملفات
+- **العمل دون اتصال أولاً** — ذاكرة SQLite مؤقتة، مزامنة في الخلفية، وإرسال مؤجل
+- **استهلاك منخفض للبيانات** — JPEG بجودة 50%، فيديو 240p، صوت 16kHz، وصور مصغرة بحجم 2KB
+- **البحث عن المستخدمين** — البحث باستخدام البريد الإلكتروني
+- **قائمة المحادثات** — أحدث المحادثات مع معاينة آخر رسالة
 
-## Project Structure
+## بنية المشروع
 
 ```
 .
 ├── backend/                 # PHP Workerman + MySQL
-│   ├── start.php           # HTTP + WebSocket entrypoint (650 lines)
-│   ├── composer.json       # Dependencies
-│   ├── init.sql            # Schema + test accounts
+│   ├── start.php           # نقطة دخول HTTP وWebSocket (650 سطراً)
+│   ├── composer.json       # الاعتماديات
+│   ├── init.sql            # المخطط وحسابات الاختبار
 │   └── Dockerfile
-├── frontend/               # Expo/React Native app
+├── frontend/               # تطبيق Expo/React Native
 │   ├── src/
-│   │   ├── screens/        # 4 screens
-│   │   ├── components/     # 6 reusable components
-│   │   ├── services/       # 8 service modules
-│   │   ├── hooks/          # 4 custom hooks
-│   │   └── context/        # Auth state
+│   │   ├── screens/        # 4 شاشات
+│   │   ├── components/     # 6 مكونات قابلة لإعادة الاستخدام
+│   │   ├── services/       # 8 وحدات خدمية
+│   │   ├── hooks/          # 4 خطافات مخصصة
+│   │   └── context/        # حالة المصادقة
 │   └── app.config.ts
-├── nginx/                  # Reverse proxy
+├── nginx/                  # وكيل عكسي
 │   └── nginx.conf
-├── docker-compose.yml      # Orchestration
-├── .env                    # Environment config
-└── SETUP.md               # Full documentation
+├── docker-compose.yml      # تنسيق الخدمات
+├── .env                    # إعدادات البيئة
+└── SETUP.md               # التوثيق الكامل
 ```
 
-## Requirements
+## المتطلبات
 
-- **Docker Desktop** (for backend)
-- **Node.js 18+** (for frontend)
-- **Emulator or physical device** (iOS/Android)
+- **Docker Desktop** (للخادم الخلفي)
+- **Node.js 18 أو أحدث** (للواجهة الأمامية)
+- **محاكي أو جهاز فعلي** (iOS/Android)
+- ملف `.env` في جذر المستودع، منسوخ من `.env.example`، مع تغيير أسرار قاعدة البيانات وJWT الافتراضية
 
-## What Was Built
+## ما تم إنجازه
 
-**39 files**, 5 independent phases, 3 specialized agents:
+**39 ملفاً**، و5 مراحل مستقلة، و3 وكلاء متخصصين:
 
-- **@backend-developer** → 650-line single-file backend with prepared statements, JWT, WebSocket handlers
-- **@ux-designer** → 4 screens + 6 components following WhatsApp dark theme
-- **@frontend-developer** → Complete wiring layer with Socket.io client, SQLite cache, media compression, offline queue
+- **@backend-developer** → خادم خلفي في ملف واحد من 650 سطراً، مع استعلامات مجهزة وJWT ومعالجات WebSocket
+- **@ux-designer** → 4 شاشات و6 مكونات وفق المظهر الداكن لـ WhatsApp
+- **@frontend-developer** → طبقة ربط كاملة تشمل عميل Socket.io وذاكرة SQLite وضغط الوسائط وقائمة انتظار العمل دون اتصال
 
-**TypeScript**: 0 errors  
-**PHP**: 0 syntax errors  
-**Tests**: Ready for Docker + emulator testing
+**TypeScript**: دون أخطاء<br>
+**PHP**: دون أخطاء نحوية<br>
+**الاختبارات**: جاهز للاختبار باستخدام Docker والمحاكي
 
-## Next Steps
+## الخطوات التالية
 
-1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop)
-2. Run `docker compose up --build`
-3. Run `cd frontend && npx expo start`
-4. Open Expo Go or emulator and login
+1. ثبّت [Docker Desktop](https://www.docker.com/products/docker-desktop)
+2. انسخ `.env.example` إلى `.env` واستبدل كل الأسرار النائبة
+3. شغّل `docker compose up --build`
+4. شغّل `cd frontend && npx expo start`
+5. افتح Expo Go أو المحاكي وسجّل الدخول
 
-See [SETUP.md](SETUP.md) for detailed setup, testing, and troubleshooting.
+راجع [SETUP.md](SETUP.md) للحصول على تفاصيل الإعداد والاختبار واستكشاف الأخطاء وإصلاحها.

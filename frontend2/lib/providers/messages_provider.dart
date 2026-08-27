@@ -70,11 +70,13 @@ class MessagesProvider extends ChangeNotifier {
 
       // Merge: keep pending optimistic messages + server list, de-dup by id.
       final pending = _messages
-          .where((m) => m.status == MessageStatus.pending)
+          .where((m) =>
+            m.status == MessageStatus.pending ||
+            m.status == MessageStatus.failed)
           .toList();
       final merged = <Message>[...pending, ...list];
       final seen = <String>{};
-      _messages = merged.where((m) => seen.add(m.id)).toList();
+        _messages = merged.where((m) => seen.add(_dedupeKey(m))).toList();
     } catch (e) {
       debugPrint('sync failed: $e');
     } finally {
@@ -91,6 +93,9 @@ class MessagesProvider extends ChangeNotifier {
     if (from != partnerId && to != partnerId) return;
     final msg = Message.fromServerJson(m);
     MessageStore.saveMessage(msg);
+    if (_messages.any((existing) => _dedupeKey(existing) == _dedupeKey(msg))) {
+      return;
+    }
     _messages = [msg, ..._messages];
     notifyListeners();
   }
@@ -102,9 +107,11 @@ class MessagesProvider extends ChangeNotifier {
     final createdAt = data['createdAt'] as String?;
     if (localId == null || id == null || createdAt == null) return;
     MessageStore.updateMessageServerId(localId, id, createdAt);
-    _messages = _messages.map((m) {
+    final serverKey = id.toString();
+    final updated = _messages.map((m) {
       if (m.id == localId) {
         return m.copyWith(
+          id: serverKey,
           serverId: id,
           createdAt: createdAt,
           status: MessageStatus.sent,
@@ -112,6 +119,8 @@ class MessagesProvider extends ChangeNotifier {
       }
       return m;
     }).toList();
+    final seen = <String>{};
+    _messages = updated.where((m) => seen.add(_dedupeKey(m))).toList();
     notifyListeners();
   }
 
@@ -173,7 +182,9 @@ class MessagesProvider extends ChangeNotifier {
       for (final m in older) {
         await MessageStore.saveMessage(m);
       }
-      _messages = [..._messages, ...older];
+      final merged = <Message>[..._messages, ...older];
+      final seen = <String>{};
+      _messages = merged.where((m) => seen.add(_dedupeKey(m))).toList();
     } catch (e) {
       debugPrint('loadMore failed: $e');
     } finally {
@@ -181,6 +192,9 @@ class MessagesProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  String _dedupeKey(Message message) =>
+      message.serverId != null ? 'server:${message.serverId}' : message.id;
 
   @override
   void dispose() {
