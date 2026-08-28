@@ -40,11 +40,6 @@ function resolveHost(): string {
 const HOST = resolveHost();
 const EXPLICIT_API_BASE_URL = extraString('API_BASE_URL');
 
-export const BACKEND = extraString('BACKEND') === 'firebase' ? 'firebase' : 'local';
-export const API_BASE_URL = EXPLICIT_API_BASE_URL
-  ? withoutTrailingSlash(EXPLICIT_API_BASE_URL)
-  : `http://${HOST}:5101`;
-
 export const firebaseConfig = {
   apiKey: extraString('firebaseApiKey'),
   authDomain: extraString('firebaseAuthDomain'),
@@ -63,6 +58,18 @@ export function firebaseReady(): boolean {
       && firebaseConfig.appId,
   );
 }
+
+function resolveBackend(): 'local' | 'firebase' {
+  const explicit = extraString('BACKEND');
+  if (explicit === 'local') return 'local';
+  if (explicit === 'firebase') return 'firebase';
+  return firebaseReady() ? 'firebase' : 'local';
+}
+
+export const BACKEND = resolveBackend();
+export const API_BASE_URL = EXPLICIT_API_BASE_URL
+  ? withoutTrailingSlash(EXPLICIT_API_BASE_URL)
+  : `http://${HOST}:5101`;
 
 if (__DEV__) {
   // eslint-disable-next-line no-console

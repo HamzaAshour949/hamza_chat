@@ -10,7 +10,8 @@ export function getBackend(): BackendClient {
     if (!firebaseReady()) {
       throw new Error('Firebase env vars are missing. See README.');
     }
-    throw new Error('Firebase backend is not enabled in this build yet.');
+    const { FirebaseBackend } = require('./firebase') as typeof import('./firebase');
+    client = new FirebaseBackend();
   } else {
     client = new LocalBackend();
   }
