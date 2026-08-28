@@ -1,22 +1,5 @@
-/**
- * AttachmentMenu — Bottom Sheet Overlay
- *
- * Layout:
- *  - Semi-transparent overlay (rgba(0,0,0,0.5)), tap to dismiss
- *  - Bottom sheet: #1F2C33 surface, top-radius 16, padding 24
- *  - Single row of four circular icon options (48dp circle on #2A3942):
- *    Photo (camera), Video (camera), File (any), Cancel (red)
- *  - Each option ≥ 80×80 dp touch target
- */
-
 import React from 'react';
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface AttachmentMenuProps {
@@ -24,6 +7,7 @@ interface AttachmentMenuProps {
   onClose: () => void;
   onTakePhoto: () => void;
   onCaptureVideo: () => void;
+  onPickGallery: () => void;
   onPickFile: () => void;
 }
 
@@ -36,12 +20,7 @@ interface MenuOption {
 
 function OptionButton({ icon, label, onPress, iconColor }: MenuOption) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={styles.optionButton}
-      accessibilityLabel={label}
-      accessibilityRole="button"
-    >
+    <Pressable onPress={onPress} style={styles.optionButton} accessibilityLabel={label} accessibilityRole="button">
       <View style={styles.iconCircle}>
         <Ionicons name={icon} size={24} color={iconColor} />
       </View>
@@ -55,28 +34,19 @@ export default function AttachmentMenu({
   onClose,
   onTakePhoto,
   onCaptureVideo,
+  onPickGallery,
   onPickFile,
 }: AttachmentMenuProps) {
   const options: MenuOption[] = [
     { icon: 'camera', label: 'Photo', onPress: onTakePhoto, iconColor: '#00A884' },
     { icon: 'videocam', label: 'Video', onPress: onCaptureVideo, iconColor: '#00A884' },
+    { icon: 'images', label: 'Gallery', onPress: onPickGallery, iconColor: '#00A884' },
     { icon: 'document', label: 'File', onPress: onPickFile, iconColor: '#00A884' },
-    { icon: 'close-circle', label: 'Cancel', onPress: onClose, iconColor: '#F15C6D' },
   ];
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <Pressable
-        style={styles.overlay}
-        onPress={onClose}
-        accessibilityLabel="Close attachment menu"
-        accessibilityRole="button"
-      >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel="Close attachment menu">
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.row}>
             {options.map((opt) => (
@@ -125,4 +95,3 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 });
-

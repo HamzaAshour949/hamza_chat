@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusBar, View, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, StatusBar, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,11 +8,6 @@ import AppNavigator from './src/navigation/AppNavigator';
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts(Ionicons.font);
-
-  if (__DEV__) {
-    // eslint-disable-next-line no-console
-    console.log('[fonts] loaded=', fontsLoaded, 'error=', fontError?.message, 'Ionicons.font=', JSON.stringify(Ionicons.font));
-  }
 
   if (!fontsLoaded && !fontError) {
     return (
