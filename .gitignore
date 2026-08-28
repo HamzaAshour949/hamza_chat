@@ -1,6 +1,7 @@
 # Dependencies
-backend/vendor/
 frontend/node_modules/
+server/node_modules/
+node_modules/
 
 # Local Expo and native build metadata
 frontend/.expo/
@@ -8,19 +9,22 @@ frontend/android/.kotlin/
 frontend/android/build/
 frontend/android/app/build/
 frontend/android/.gradle/
+frontend/ios/
 
 # Environment variables
 .env
 !.env.example
+frontend/.env
+server/.env
 
-# Uploads (keep directory via .gitkeep)
-backend/uploads/*
-!backend/uploads/.gitkeep
+# Local test server data
+server/data/
+server/uploads/
 
-# Docker volumes
-mysql_data/
+# Build artifacts
+*.apk
+*.aab
+dist/
 
 # OS files
 .DS_Store
-
-node_modules/
