@@ -64,6 +64,7 @@ export default {
       firebaseAppId: envString('EXPO_PUBLIC_FIREBASE_APP_ID'),
     },
     plugins: [
+      './plugins/withCleartext',
       'expo-secure-store',
       'expo-audio',
       'expo-font',

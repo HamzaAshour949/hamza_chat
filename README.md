@@ -125,7 +125,7 @@ cd android
 ./gradlew assembleRelease
 ```
 
-APK path: `frontend/android/app/build/outputs/apk/release/app-release.apk`
+APK path: `dist/hamza-chat.apk` (also `frontend/android/app/build/outputs/apk/release/app-release.apk`)
 
 That build talks to the local server at `http://10.0.2.2:5101` (emulator). For a device on Wi-Fi, set `EXPO_PUBLIC_API_BASE_URL=http://YOUR_LAN_IP:5101` before prebuild.
 
