@@ -53,7 +53,7 @@ export default {
     },
     extra: {
       TEST_ACCOUNT: envString('EXPO_PUBLIC_TEST_ACCOUNT') ?? envString('TEST_ACCOUNT'),
-      BACKEND: envString('EXPO_PUBLIC_BACKEND') ?? 'local',
+      BACKEND: envString('EXPO_PUBLIC_BACKEND'),
       API_HOST: envString('EXPO_PUBLIC_API_HOST') ?? envString('API_HOST'),
       API_BASE_URL: envString('EXPO_PUBLIC_API_BASE_URL') ?? envString('API_BASE_URL'),
       firebaseApiKey: envString('EXPO_PUBLIC_FIREBASE_API_KEY'),
