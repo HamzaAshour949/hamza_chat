@@ -4,6 +4,12 @@
 
 Expo React Native client. **Production backend is Firebase** (no Node/PHP). A local Node.js server is included only so two emulators can talk during development.
 
+<p>
+  <img src="docs/screenshots/chats.webp" width="240" alt="Chat list">
+  <img src="docs/screenshots/conversation.webp" width="240" alt="A conversation with a photo shown as a 600-byte thumbnail and a Tap to load button">
+  <img src="docs/screenshots/attach.webp" width="240" alt="Attachment menu: photo, video, gallery, file">
+</p>
+
 ## Features
 
 - Email/password auth
@@ -26,7 +32,7 @@ firebase/     Firestore + Storage security rules
 
 ## Local emulator testing
 
-Needs Node 22+ and the Android SDK.
+Needs Node 22.5+ (the test server uses the built-in `node:sqlite`), JDK 17 and the Android SDK.
 
 ```bash
 # 1. Test server (binds 0.0.0.0:5101)
@@ -125,7 +131,7 @@ cd android
 ./gradlew assembleRelease
 ```
 
-APK path: `dist/hamza-chat.apk` (also `frontend/android/app/build/outputs/apk/release/app-release.apk`)
+The APK is written to `frontend/android/app/build/outputs/apk/release/app-release.apk`. Gradle needs JDK 17 (`export JAVA_HOME=$(/usr/libexec/java_home -v 17)` on macOS).
 
 That build talks to the local server at `http://10.0.2.2:5101` (emulator). For a device on Wi-Fi, set `EXPO_PUBLIC_API_BASE_URL=http://YOUR_LAN_IP:5101` before prebuild.
 
